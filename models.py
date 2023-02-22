@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Time, text, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
+import schemas
 
 
 class Store(Base):
@@ -14,6 +15,7 @@ class Store(Base):
 
     def __repr__(self) -> str:
         return f'{self.id} {self.schedule}'
+
 
 
 class Hour(Base):
@@ -51,7 +53,8 @@ class BusinessHours(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     store_id = Column(String, ForeignKey('stores.id'))
     store = relationship('Store', back_populates='schedule')
-
+    
+    day_id = Column(String, unique=True, nullable=False)
     day = Column(Integer, nullable=False)
     start_time_local = Column(Time, default=text("'00:00:00'"))
     end_time_local = Column(Time, default=text("'23:59:59'"))

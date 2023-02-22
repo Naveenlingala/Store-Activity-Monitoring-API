@@ -4,12 +4,15 @@ from pydantic import BaseModel
 
 
 class businessHours(BaseModel):
-    day : int
-    start_time_local : Optional[datetime] = None
-    end_time_local : Optional[datetime] = None
+    day: int
+    start_time_local: Optional[time] = None
+    end_time_local: Optional[time] = None
 
 
 class store(BaseModel):
     id: str
-    local_timezone: str
-    schedule: businessHours
+    local_timezone: Optional[str] = None
+    schedule: Optional[List[businessHours]] = None
+
+    class Config():
+        orm_mode = True
