@@ -17,6 +17,17 @@ class store(BaseModel):
     class Config():
         orm_mode = True
 
+class give_stmp(BaseModel):
+    utc_timestamp: Optional[str | datetime ]
+
+    @validator("utc_timestamp", pre=True)
+    def convert_datetime(cls, v):
+        try:
+            val = datetime.strptime(v, "%Y-%m-%d %H:%M:%S.%f %Z")
+            return val
+        except:
+            raise ValueError("Invalid Time")
+
 
 class poll(BaseModel):
     id: str

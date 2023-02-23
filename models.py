@@ -36,6 +36,9 @@ class Hour(Base):
     my_index = Index('my_index', store_id, timestamp_local, unique=True)
     status = Column(Integer)
 
+    def __repr__(self) -> str:
+        return f"{self.timestamp_local} {self.status}"
+
 
 class Day(Base):
     __tablename__ = "day"
