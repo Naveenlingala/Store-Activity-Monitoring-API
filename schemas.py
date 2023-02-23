@@ -1,6 +1,6 @@
 from typing import List, Optional
-from datetime import datetime, time, timedelta
-from pydantic import BaseModel
+from datetime import datetime, time
+from pydantic import BaseModel, validator
 
 
 class businessHours(BaseModel):
@@ -16,3 +16,24 @@ class store(BaseModel):
 
     class Config():
         orm_mode = True
+
+
+class poll(BaseModel):
+    id: str
+    utc_timestamp: str | datetime
+    status: str | int = "inactive"
+
+    @validator("status", pre=True)
+    def convert_to_int(cls, v):
+        if v == "active":
+            return 1
+        else:
+            return 0
+
+    @validator("utc_timestamp", pre=True)
+    def convert_datetime(cls, v):
+        try:
+            val = datetime.strptime(v, "%Y-%m-%d %H:%M:%S.%f %Z")
+            return val
+        except:
+            raise ValueError("Invalid Time")
