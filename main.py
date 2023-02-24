@@ -1,10 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status
 from database import engine, get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta, timezone
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse
 from pathlib import Path
 import schemas
 import models
@@ -263,7 +263,7 @@ def trigger_report(db: Session = Depends(get_db)):
 
 
 @app.get('/get_report/{report_id}')
-def get_report(report_id: str, background_tasks: BackgroundTasks):
+def get_report(report_id: str):
     # specify the path to your CSV file
     file_path = f"Data/{report_id}.csv"
     # check if the file exists
