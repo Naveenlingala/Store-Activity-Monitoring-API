@@ -251,7 +251,7 @@ def trigger_report(db: Session = Depends(get_db)):
             downtime_last_hour = timestamp_to_str(
                 timedelta(seconds=3600) - uptime_last_hour)
             downtime_last_day = timestamp_to_str(get_bussineess(
-                db, store, local_timestamp.weekday()).total_time() - uptime_last_day)
+                db, store, local_timestamp.weekday()-1).total_time() - uptime_last_day)
             downtime_last_week = timestamp_to_str(get_week_time(
                 db, store) - uptime_last_week)
 
@@ -277,3 +277,11 @@ def get_report(report_id: str):
     response.headers["Detail"] = "Completed"
 
     return response
+
+# Assumptions
+# start_time -------  14:00 xxxxxxx endtime
+
+# last_hour mean prevoius one hour example --------- 7:00 - 8:00 etc for 8:13
+# last_day mean previous day from ------------- 23rd start_time to end_time for 24th day
+# last_week mean previous week from ----------- last Monday to Sunday
+# Time only related to current date in case of 24/7
