@@ -1,13 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from database import engine, get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta, timezone
+from fastapi.responses import FileResponse, PlainTextResponse
+from pathlib import Path
 import schemas
 import models
 import pytz
-
+import csv
 
 app = FastAPI()
 
@@ -87,7 +89,11 @@ def poll(request: schemas.poll, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Store Id")
     # Convert UTC to local time zone
+    if request.utc_timestamp > datetime.now(timezone.utc).replace(tzinfo=None):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Timestamp must be less than {datetime.now(timezone.utc)} UTC")
     local_timestamp = store.convert_to_local(request.utc_timestamp)
+
     create_default(db, store, local_timestamp)
 
     store_previous_local_poll = store.previous_poll
@@ -109,6 +115,8 @@ def poll(request: schemas.poll, db: Session = Depends(get_db)):
                             detail="Timestamp already found")
 
     # Adjust prev and current value
+    # Remove unecessary hours
+    delete_unecessary(db, store, local_timestamp)
     store.week_info.adjust_week(local_timestamp)
     store.day_info.adjust_day(local_timestamp)
     db.commit()
@@ -171,17 +179,22 @@ def calculate_last_hour(db, store, local_timestamp):
     if business_hours_record.start_time_local > start_of_last_hour.time():
         previous_time = datetime.combine(
             local_timestamp, business_hours_record.start_time_local)
+    print(local_timestamp)
+    print(start_of_last_hour)
+    print(end_of_last_hour)
 
     for result in results:
         if result.timestamp_local > end_of_last_hour:
             # Handle condition for 24/7
-            if result.status == 1 and (end_of_last_hour.date - result.timestamp_local.date).days == 0:
+            if result.status == 1 and (end_of_last_hour.date() - result.timestamp_local.date()).days == 0:
                 uptime_duration += end_of_last_hour - previous_time
+                break
         elif result.status == 1:
             uptime_duration += result.timestamp_local - previous_time
 
         previous_time = result.timestamp_local
-    print(store)
+
+    print(store.id, uptime_duration)
     return uptime_duration
 
 
@@ -196,31 +209,71 @@ def timestamp_to_str(delta) -> str:
     return "{0} days, {1}:{2:02d}:{3:02d}".format(delta.days, delta.seconds // 3600, (delta.seconds // 60) % 60, delta.seconds % 60)
 
 
-@ app.put("/trigger_report")
-def trigger_report(request: schemas.give_stmp, db: Session = Depends(get_db)):
+def delete_unecessary(db, store, local_timestamp):
+    start_of_last_hour = (local_timestamp - timedelta(hours=1)
+                          ).replace(minute=0, second=0, microsecond=0).replace(tzinfo=None)
+    db.query(models.Hour).filter(models.Hour.store == store,
+                                 models.Hour.timestamp_local < start_of_last_hour).delete()
+    db.commit()
+
+
+# For testing with given time
+# # Change .get to .put
+# # add request: schemas.give_stmp
+@ app.get("/trigger_report")
+def trigger_report(db: Session = Depends(get_db)):
     stores = db.query(models.Store).all()
-    ans = []
+    utc_time = datetime.now(timezone.utc)
+    report_id = f"{utc_time.strftime('%Y-%m-%d_%H-%M-%S')}"
 
-    for store in stores:
+    with open(f"Data/{report_id}.csv", "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        # Header
+        writer.writerow(["Store ID", "Uptime Last Hour", "Uptime Last Day", "Uptime Last Week",
+                        "Downtime Last Hour", "Downtime Last Day", "Downtime Last Week"])
+        for store in stores:
+            local_timestamp = store.convert_to_local(
+                utc_time)
 
-        local_timestamp = store.convert_to_local(datetime.now(timezone.utc))
-        # if request.utc_timestamp:
-        #     local_timestamp.
+            # if request.utc_timestamp:
+            #     local_timestamp = store.convert_to_local(request.utc_timestamp)
 
-        create_default(db, store, local_timestamp)
-        # Upadate Values
-        store.week_info.adjust_week(local_timestamp)
-        store.day_info.adjust_day(local_timestamp)
+            create_default(db, store, local_timestamp)
+            # Upadate Values
+            store.week_info.adjust_week(local_timestamp)
+            store.day_info.adjust_day(local_timestamp)
 
-        uptime_last_hour = calculate_last_hour(db, store, local_timestamp)
-        uptime_last_day = store.day_info.previous_day_uptime
-        uptime_last_week = store.week_info.previous_week_uptime
+            delete_unecessary(db, store, local_timestamp)
+            uptime_last_hour = calculate_last_hour(db, store, local_timestamp)
+            uptime_last_day = store.day_info.previous_day_uptime
+            uptime_last_week = store.week_info.previous_week_uptime
 
-        downtime_last_hour = timedelta(seconds=3600) - uptime_last_hour
-        downtime_last_day = get_bussineess(
-            db, store, local_timestamp.weekday()).total_time() - uptime_last_day
-        downtime_last_week = get_week_time(
-            db, store) - uptime_last_week
+            downtime_last_hour = timestamp_to_str(
+                timedelta(seconds=3600) - uptime_last_hour)
+            downtime_last_day = timestamp_to_str(get_bussineess(
+                db, store, local_timestamp.weekday()).total_time() - uptime_last_day)
+            downtime_last_week = timestamp_to_str(get_week_time(
+                db, store) - uptime_last_week)
 
-        ans.append({})
-    return ans
+            writer.writerow([store.id, timestamp_to_str(uptime_last_hour), timestamp_to_str(
+                uptime_last_day), timestamp_to_str(uptime_last_week), downtime_last_hour, downtime_last_day, downtime_last_week])
+
+    raise HTTPException(status_code=status.HTTP_201_CREATED,
+                        detail={"report_id": report_id})
+
+
+@app.get('/get_report/{report_id}')
+def get_report(report_id: str, background_tasks: BackgroundTasks):
+    # specify the path to your CSV file
+    file_path = f"Data/{report_id}.csv"
+    # check if the file exists
+    if not Path(file_path).is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Running")
+
+    # create a response object with the CSV file
+    response = FileResponse(file_path, media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+    response.headers["Detail"] = "Completed"
+
+    return response

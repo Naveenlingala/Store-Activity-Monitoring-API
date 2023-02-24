@@ -17,8 +17,11 @@ class store(BaseModel):
     class Config():
         orm_mode = True
 
+# For Testing trigger report
+
+
 class give_stmp(BaseModel):
-    utc_timestamp: Optional[str | datetime ]
+    utc_timestamp: Optional[str | datetime]
 
     @validator("utc_timestamp", pre=True)
     def convert_datetime(cls, v):
