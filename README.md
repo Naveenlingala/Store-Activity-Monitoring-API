@@ -1,11 +1,11 @@
-# Restaurant Activity Monitoring API
+# Store Activity Monitoring API
 
 Demo and explaination video( 5 minutes): https://www.loom.com/share/30d1e06462fd4b6fb0993cb23fc9dd18
 
-The Restaurant Activity Monitoring System is designed to assist restaurant owners in tracking the online presence of their establishments during business hours. The system provides a report that indicates the frequency of any inactive periods experienced by the restaurants in the past. This application is built using FASTAPI and SQLAlchemy, offering efficient and reliable performance.
+The Store Activity Monitoring System is designed to assist restaurant owners in tracking the online presence of their establishments during business hours. The system provides a report that indicates the frequency of any inactive periods experienced by the restaurants in the past. This application is built using FASTAPI and SQLAlchemy, offering efficient and reliable performance.
 
 ## Purpose
-The primary purpose of this project is to address situations where a restaurant might unexpectedly go inactive for a few hours. Restaurant owners want to have a report that shows how often these inactive periods have occurred in the past. By analyzing this data, owners can gain insights into the operational efficiency of their online presence and take appropriate measures to improve it.
+The primary purpose of this project is to address situations where a restaurant might unexpectedly go inactive for a few hours. Store owners want to have a report that shows how often these inactive periods have occurred in the past. By analyzing this data, owners can gain insights into the operational efficiency of their online presence and take appropriate measures to improve it.
 
 ## Features
 
@@ -59,5 +59,5 @@ Schema View:![image](https://github.com/Naveenlingala/Store_Monitoring_API/asset
 
 ## Conclusion
 
-The Restaurant Activity Monitoring System provides an effective solution for restaurant owners to monitor and analyze the online presence of their establishments during business hours. By registering stores, receiving regular poll requests, and generating insightful reports, owners can identify any inactive periods and take appropriate actions to improve the online availability of their restaurants.
+The Store Activity Monitoring API provides an effective solution for restaurant owners to monitor and analyze the online presence of their establishments during business hours. By registering stores, receiving regular poll requests, and generating insightful reports, owners can identify any inactive periods and take appropriate actions to improve the online availability of their restaurants.
 
